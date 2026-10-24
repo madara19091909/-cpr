@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/catalog.dart';
 import 'login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FarmScreen extends StatefulWidget {
   const FarmScreen({super.key});
@@ -10,12 +11,47 @@ class FarmScreen extends StatefulWidget {
 
 class _FarmScreenState extends State<FarmScreen> {
   int _tab = 0;
-  int _coins = 250000;
+  int _coins = 0;
   int _level = 1;
-  final Map<String, int> _inventory = {'القمح': 3};
-  final Set<String> _ownedAnimals = {'الدجاج'};
+  String _playerName = 'مزارع';
+  bool _loadingProfile = true;
+  final Map<String, int> _inventory = {};
+  final Set<String> _ownedAnimals = {};
   final Set<String> _ownedTools = {};
   String _notice = 'أهلاً بك بمزرعتك!';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlayer();
+  }
+
+  Future<void> _loadPlayer() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    try {
+      final profile = await Supabase.instance.client
+          .from('profiles')
+          .select('username, display_name, level, dinar')
+          .eq('id', user.id)
+          .single();
+      if (!mounted) return;
+      setState(() {
+        _playerName = (profile['display_name'] as String?)?.isNotEmpty == true
+            ? profile['display_name'] as String
+            : (profile['username'] as String? ?? 'مزارع');
+        _level = (profile['level'] as num?)?.toInt() ?? 1;
+        _coins = (profile['dinar'] as num?)?.toInt() ?? 0;
+        _loadingProfile = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingProfile = false;
+        _notice = 'تعذّر تحميل ملف اللاعب. تأكد من تشغيل مخطط قاعدة البيانات في Supabase.';
+      });
+    }
+  }
 
   void _buySeed(SeedItem item) {
     if (_level < item.level) {
@@ -67,12 +103,13 @@ class _FarmScreenState extends State<FarmScreen> {
         actions: [
           IconButton(
             tooltip: 'الحساب',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () async { await Supabase.instance.client.auth.signOut(); },
+            icon: const Icon(Icons.logout),
           )
         ],
       ),
       body: Column(children: [
+        if (_loadingProfile) const LinearProgressIndicator(minHeight: 3),
         _topStats(),
         Expanded(child: pages[_tab]),
         Container(
@@ -108,8 +145,8 @@ class _FarmScreenState extends State<FarmScreen> {
       const CircleAvatar(backgroundColor: Colors.white, child: Text('🌱', style: TextStyle(fontSize: 24))),
       const SizedBox(width: 10),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('مزارع CPR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
-        Text('المستوى $_level • الخبرة ${_level * 20}/100', style: const TextStyle(color: Colors.white70)),
+        Text(_playerName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+        Text('المستوى $_level', style: const TextStyle(color: Colors.white70)),
       ])),
       Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
         const Text('الرصيد', style: TextStyle(color: Colors.white70)),

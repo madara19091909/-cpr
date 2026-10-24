@@ -10,7 +10,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: 'https://bkwohueqglpgsdnznpgq.supabase.co',
-    publishableKey: 'ضع_مفتاح_sb_publishable_هنا',
+    publishableKey: 'sb_publishable_mi0TItQF9bEphuN5lVr-ug_KNWPYoGf',
   );
 
   runApp(const MazraatiApp());

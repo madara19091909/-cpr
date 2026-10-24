@@ -7,10 +7,11 @@ create table if not exists public.profiles (
   display_name text not null default 'مزارع جديد',
   level integer not null default 1 check (level >= 1),
   xp bigint not null default 0 check (xp >= 0),
-  dinar bigint not null default 250000 check (dinar >= 0),
+  dinar bigint not null default 0 check (dinar >= 0),
   premium_coins bigint not null default 0 check (premium_coins >= 0),
   created_at timestamptz not null default now()
 );
+alter table public.profiles alter column dinar set default 0;
 
 create table if not exists public.farms (
   id uuid primary key default gen_random_uuid(),

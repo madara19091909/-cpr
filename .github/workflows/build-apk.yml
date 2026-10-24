@@ -35,6 +35,39 @@ jobs:
       - name: Generate Android platform files
         run: flutter create --platforms=android --org com.cpr.mazraati .
 
+      - name: Ensure Android internet permission
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          path = Path("android/app/src/main/AndroidManifest.xml")
+          if not path.exists():
+              raise SystemExit("AndroidManifest.xml not found")
+
+          ET.register_namespace("android", "http://schemas.android.com/apk/res/android")
+          tree = ET.parse(path)
+          root = tree.getroot()
+          android = "{http://schemas.android.com/apk/res/android}"
+          permission = "android.permission.INTERNET"
+
+          found = any(
+              item.tag == "uses-permission"
+              and item.get(android + "name") == permission
+              for item in root
+          )
+
+          if not found:
+              element = ET.Element(
+                  "uses-permission",
+                  {android + "name": permission}
+              )
+              root.insert(0, element)
+
+          tree.write(path, encoding="utf-8", xml_declaration=True)
+          print("INTERNET permission is present.")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
